@@ -1,30 +1,38 @@
 /* global Office, Excel */
 
+var validationTimer = null;
+
 Office.onReady((info) => {
   if (info.host === Office.HostType.Excel) {
     document.getElementById("validate-btn").addEventListener("click", runValidation);
-    registerSaveHandler();
+    // Auto-validate on open
+    runValidation();
+    // Re-validate when cells change
+    registerChangeHandler();
   }
 });
 
 /**
- * Register a handler that runs validation after the workbook is saved.
- * Uses Workbook.onSaved (ExcelApi 1.12+), with graceful fallback.
+ * Register a handler that re-validates after worksheet changes.
+ * Uses a debounce timer to avoid running on every keystroke.
  */
-async function registerSaveHandler() {
+async function registerChangeHandler() {
   try {
     await Excel.run(async (context) => {
-      context.workbook.onSaved.add(onWorkbookSaved);
+      context.workbook.onChanged.add(onWorkbookChanged);
       await context.sync();
-      setStatus("保存時に自動チェックが有効です");
     });
   } catch (e) {
-    setStatus("手動チェックモード（保存時の自動チェックはこのバージョンでは利用できません）");
+    // Fallback: onChanged not available, manual only
   }
 }
 
-async function onWorkbookSaved() {
-  await runValidation();
+function onWorkbookChanged() {
+  // Debounce: wait 1.5s after last change before re-validating
+  if (validationTimer) clearTimeout(validationTimer);
+  validationTimer = setTimeout(function () {
+    runValidation();
+  }, 1500);
 }
 
 async function runValidation() {
