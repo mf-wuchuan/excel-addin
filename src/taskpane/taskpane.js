@@ -9,6 +9,10 @@ Office.onReady((info) => {
       Office.addin.setStartupBehavior(Office.StartupBehavior.load);
     }
 
+    // Tag this document so the task pane auto-opens next time
+    Office.context.document.settings.set("Office.AutoShowTaskpaneWithDocument", true);
+    Office.context.document.settings.saveAsync();
+
     var btn = document.getElementById("validate-btn");
     if (btn) {
       btn.addEventListener("click", runValidation);
