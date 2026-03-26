@@ -4,7 +4,15 @@ var validationTimer = null;
 
 Office.onReady((info) => {
   if (info.host === Office.HostType.Excel) {
-    document.getElementById("validate-btn").addEventListener("click", runValidation);
+    // Enable auto-startup: run this add-in when the workbook opens
+    if (Office.addin && Office.addin.setStartupBehavior) {
+      Office.addin.setStartupBehavior(Office.StartupBehavior.load);
+    }
+
+    var btn = document.getElementById("validate-btn");
+    if (btn) {
+      btn.addEventListener("click", runValidation);
+    }
     // Auto-validate on open
     runValidation();
     // Re-validate when cells change
@@ -53,6 +61,11 @@ async function runValidation() {
 
     updateGateBanner(errors);
     renderResults(errors);
+
+    // Auto-open taskpane if there are errors
+    if (errors.length > 0 && Office.addin && Office.addin.showAsTaskpane) {
+      try { Office.addin.showAsTaskpane(); } catch (_) { /* already visible */ }
+    }
   } catch (e) {
     setStatus("エラーが発生しました: " + e.message);
     console.error(e);
