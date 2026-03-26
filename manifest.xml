@@ -14,6 +14,12 @@
   <Description DefaultValue="見積書の入力チェックを行うアドイン" />
   <SupportUrl DefaultValue="https://localhost:3000" />
 
+  <Requirements>
+    <Sets>
+      <Set Name="AddinCommands" MinVersion="1.1" />
+    </Sets>
+  </Requirements>
+
   <Hosts>
     <Host Name="Workbook" />
   </Hosts>
@@ -61,6 +67,7 @@
                   <Action xsi:type="ShowTaskpane">
                     <TaskpaneId>ButtonId1</TaskpaneId>
                     <SourceLocation resid="Taskpane.Url" />
+                    <AutoShow>true</AutoShow>
                   </Action>
                 </Control>
               </Group>
