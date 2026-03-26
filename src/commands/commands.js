@@ -117,7 +117,7 @@ async function checkYellowCells(context, errors) {
     const colCount = usedRange.columnCount;
     const startRow = usedRange.rowIndex;
     const startCol = usedRange.columnIndex;
-    const emptyYellowCells = [];
+    const grid = {};
     const batchSize = 20;
 
     for (let r = 0; r < rowCount; r += batchSize) {
@@ -127,18 +127,12 @@ async function checkYellowCells(context, errors) {
       for (let cr = 0; cr < rowsInBatch; cr++) {
         for (let cc = 0; cc < colCount; cc++) {
           const cell = sheet.getRangeByIndexes(
-            startRow + r + cr,
-            startCol + cc,
-            1,
-            1
+            startRow + r + cr, startCol + cc, 1, 1
           );
           cell.load("values");
           cell.format.fill.load("color");
-          const mergeArea = cell.getMergeAreasOrNullObject();
-          mergeArea.load("address");
           cellInfos.push({
             cell,
-            mergeArea,
             absRow: startRow + r + cr,
             absCol: startCol + cc,
           });
@@ -146,31 +140,29 @@ async function checkYellowCells(context, errors) {
       }
       await context.sync();
 
-      const checkedMergeAreas = new Set();
-
-      for (const { cell, mergeArea, absRow, absCol } of cellInfos) {
-        const fillColor = cell.format.fill.color;
-        if (!isYellowColor(fillColor)) continue;
-
-        if (mergeArea && !mergeArea.isNullObject) {
-          const mergeAddr = mergeArea.address;
-          if (checkedMergeAreas.has(mergeAddr)) continue;
-          checkedMergeAreas.add(mergeAddr);
-
-          const topLeftAddr = mergeAddr.split("!").pop().split(":")[0];
-          const thisCellAddr = getCellAddress(absRow, absCol);
-          if (topLeftAddr !== thisCellAddr) continue;
-        }
-
-        const cellValue = cell.values[0][0];
-        if (
-          cellValue === null ||
-          cellValue === undefined ||
-          cellValue === ""
-        ) {
-          emptyYellowCells.push(getCellAddress(absRow, absCol));
+      for (const { cell, absRow, absCol } of cellInfos) {
+        var fillColor;
+        try { fillColor = cell.format.fill.color; } catch (e) { continue; }
+        if (isYellowColor(fillColor)) {
+          grid[absRow + "," + absCol] = {
+            value: cell.values[0][0],
+            row: absRow,
+            col: absCol,
+          };
         }
       }
+    }
+
+    // Find empty yellow cells, skipping secondary cells of merged regions.
+    // Heuristic: if the cell to the left or above is also yellow, it is
+    // likely a continuation of a merged region — skip it.
+    const emptyYellowCells = [];
+    for (var key in grid) {
+      var info = grid[key];
+      if (info.value !== null && info.value !== undefined && info.value !== "") continue;
+      if (grid[info.row + "," + (info.col - 1)]) continue;
+      if (grid[(info.row - 1) + "," + info.col]) continue;
+      emptyYellowCells.push(getCellAddress(info.row, info.col));
     }
 
     if (emptyYellowCells.length > 0) {

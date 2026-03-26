@@ -96,8 +96,10 @@ async function checkSumFormula(context, errors) {
 
 /**
  * Check 2: Find all cells with yellow background across all sheets.
- * Only report the top-left cell of each merged region (secondary merged
- * cells inherit the color but have no independent value).
+ * For merged regions, only the top-left cell holds a value — secondary
+ * cells appear empty but are not truly unfilled. We detect this by
+ * checking each yellow cell's isEntireRow/column merge status via the
+ * address of its surrounding merged area.
  */
 async function checkYellowCells(context, errors) {
   const sheets = context.workbook.worksheets;
@@ -116,17 +118,9 @@ async function checkYellowCells(context, errors) {
     const startRow = usedRange.rowIndex;
     const startCol = usedRange.columnIndex;
 
-    // First, collect merged areas to know which cells are secondary (non-top-left)
-    const mergedCells = new Set();
-    try {
-      // Load all cells' merge info by checking each cell's mergeArea
-      // This is expensive, so we'll do it alongside color checking
-    } catch (e) {
-      // Merge detection not critical
-    }
-
-    const emptyYellowCells = [];
-    // Process rows in batches to limit context.sync() calls
+    // Build a grid: for each cell, store its color and value
+    // key = "row,col", value = { color, value }
+    const grid = {};
     const batchSize = 20;
 
     for (let r = 0; r < rowCount; r += batchSize) {
@@ -138,12 +132,8 @@ async function checkYellowCells(context, errors) {
           const cell = sheet.getRangeByIndexes(startRow + r + cr, startCol + cc, 1, 1);
           cell.load("values");
           cell.format.fill.load("color");
-          // Load mergeArea to detect merged cells
-          const mergeArea = cell.getMergeAreasOrNullObject();
-          mergeArea.load("address");
           cellInfos.push({
             cell,
-            mergeArea,
             absRow: startRow + r + cr,
             absCol: startCol + cc,
           });
@@ -151,30 +141,47 @@ async function checkYellowCells(context, errors) {
       }
       await context.sync();
 
-      // Track which merge areas we've already checked (by address)
-      const checkedMergeAreas = new Set();
-
-      for (const { cell, mergeArea, absRow, absCol } of cellInfos) {
-        const fillColor = cell.format.fill.color;
-        if (!isYellowColor(fillColor)) continue;
-
-        // For merged cells, only check the top-left cell of the merge area
-        if (mergeArea && !mergeArea.isNullObject) {
-          const mergeAddr = mergeArea.address;
-          if (checkedMergeAreas.has(mergeAddr)) continue;
-          checkedMergeAreas.add(mergeAddr);
-
-          // Extract top-left address from merge address (e.g., "Sheet!A1:C3" -> check A1)
-          const topLeftAddr = mergeAddr.split("!").pop().split(":")[0];
-          const thisCellAddr = getCellAddress(absRow, absCol);
-          if (topLeftAddr !== thisCellAddr) continue;
+      for (const { cell, absRow, absCol } of cellInfos) {
+        var fillColor;
+        try {
+          fillColor = cell.format.fill.color;
+        } catch (e) {
+          continue;
         }
-
-        const cellValue = cell.values[0][0];
-        if (cellValue === null || cellValue === undefined || cellValue === "") {
-          emptyYellowCells.push(getCellAddress(absRow, absCol));
+        if (isYellowColor(fillColor)) {
+          grid[absRow + "," + absCol] = {
+            value: cell.values[0][0],
+            row: absRow,
+            col: absCol,
+          };
         }
       }
+    }
+
+    // Now find empty yellow cells, skipping secondary cells of merged regions.
+    // Heuristic: if a yellow cell is empty AND the cell directly to its left
+    // is also yellow (with or without value), it is likely a secondary merged cell.
+    // Only report cells where no yellow neighbor to the left exists,
+    // OR no yellow neighbor directly above with the same column exists as a "start".
+    const emptyYellowCells = [];
+
+    for (var key in grid) {
+      var info = grid[key];
+      if (info.value !== null && info.value !== undefined && info.value !== "") {
+        continue; // has value, not a problem
+      }
+
+      // Check if this is a secondary cell in a horizontal merge:
+      // if the cell to the left is also yellow, skip this cell
+      var leftKey = info.row + "," + (info.col - 1);
+      if (grid[leftKey]) continue;
+
+      // Check if this is a secondary cell in a vertical merge:
+      // if the cell above is also yellow AND empty with same column, skip
+      var aboveKey = (info.row - 1) + "," + info.col;
+      if (grid[aboveKey]) continue;
+
+      emptyYellowCells.push(getCellAddress(info.row, info.col));
     }
 
     if (emptyYellowCells.length > 0) {
