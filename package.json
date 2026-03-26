@@ -1,0 +1,24 @@
+{
+  "name": "excel-validation-addin",
+  "version": "1.0.0",
+  "description": "Excel add-in for validating 見積書 sheets",
+  "main": "src/taskpane/taskpane.js",
+  "scripts": {
+    "dev-server": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "start": "webpack serve --mode development",
+    "sideload": "office-addin-debugging start manifest.xml",
+    "manifest:prod": "node scripts/update-manifest.js"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^5.6.0",
+    "copy-webpack-plugin": "^12.0.2",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.0",
+    "office-addin-dev-certs": "^1.13.0"
+  },
+  "dependencies": {
+    "@microsoft/office-js": "^1.1.89"
+  }
+}
