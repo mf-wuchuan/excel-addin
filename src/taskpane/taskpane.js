@@ -51,6 +51,7 @@ async function runValidation() {
       await checkYellowCells(context, errors);
     });
 
+    updateGateBanner(errors);
     renderResults(errors);
   } catch (e) {
     setStatus("エラーが発生しました: " + e.message);
@@ -237,6 +238,29 @@ function getCellAddress(row, col) {
   return colStr + (row + 1);
 }
 
+function updateGateBanner(errors) {
+  const banner = document.getElementById("gate-banner");
+  // Count total unfilled fields across all errors
+  var totalUnfilled = 0;
+  for (var i = 0; i < errors.length; i++) {
+    if (errors[i].cells) {
+      totalUnfilled += errors[i].cells.length;
+    } else if (errors[i].type === "fail") {
+      totalUnfilled += 1;
+    }
+  }
+
+  if (totalUnfilled === 0) {
+    banner.className = "ready";
+    banner.innerHTML = '<span class="count">&#10004;</span>提出OK';
+  } else {
+    banner.className = "not-ready";
+    banner.innerHTML =
+      '<span class="count">' + totalUnfilled + '</span>' +
+      '<span class="label">件の未入力があります — 提出できません</span>';
+  }
+}
+
 function renderResults(errors) {
   const container = document.getElementById("results-container");
 
@@ -252,8 +276,22 @@ function renderResults(errors) {
     html += '<div class="result-section">';
     html += '<h2 class="' + err.type + '">' + err.title + "</h2>";
     html += '<div class="result-body"><ul>';
-    for (const detail of err.details) {
-      html += "<li>" + detail + "</li>";
+    if (err.cells && err.sheet) {
+      // Yellow cell errors: each cell gets its own clickable link
+      for (var j = 0; j < err.cells.length; j++) {
+        html +=
+          '<li>セル <span class="cell-link" data-sheet="' +
+          err.sheet +
+          '" data-cell="' +
+          err.cells[j] +
+          '">' +
+          err.cells[j] +
+          "</span> が未入力です</li>";
+      }
+    } else {
+      for (const detail of err.details) {
+        html += "<li>" + detail + "</li>";
+      }
     }
     html += "</ul>";
     if (err.sheet && err.cell) {

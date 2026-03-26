@@ -65,4 +65,36 @@
       padding: 20px;
       color: #217346;
       font-size: 14px;
-    }</style><script defer="defer" src="taskpane.js"></script></head><body><h1>見積書 入力チェック</h1><button id="validate-btn">チェック実行</button><div id="status"></div><div id="results-container"></div><script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script></body></html>
+    }
+
+    /* Submit gate banner */
+    #gate-banner {
+      display: none;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 14px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    #gate-banner.not-ready {
+      display: block;
+      background: #fde8e8;
+      border: 2px solid #c00;
+      color: #c00;
+    }
+    #gate-banner.ready {
+      display: block;
+      background: #e8f5e9;
+      border: 2px solid #217346;
+      color: #217346;
+    }
+    #gate-banner .count {
+      font-size: 28px;
+      display: block;
+      line-height: 1.2;
+    }
+    #gate-banner .label {
+      font-size: 12px;
+      font-weight: normal;
+    }</style><script defer="defer" src="taskpane.js"></script></head><body><h1>見積書 入力チェック</h1><div id="gate-banner"></div><button id="validate-btn">チェック実行</button><div id="status"></div><div id="results-container"></div><script src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script></body></html>
