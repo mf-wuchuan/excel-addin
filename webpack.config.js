@@ -9,7 +9,6 @@ module.exports = async (env, options) => {
   return {
     entry: {
       taskpane: "./src/taskpane/taskpane.js",
-      commands: "./src/commands/commands.js",
     },
     output: {
       path: path.resolve(__dirname, "dist"),
