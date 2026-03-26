@@ -49,7 +49,7 @@ function onWorkbookChanged() {
 
 async function runValidation() {
   const btn = document.getElementById("validate-btn");
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   setStatus("チェック中...");
 
   try {
@@ -66,15 +66,15 @@ async function runValidation() {
     updateGateBanner(errors);
     renderResults(errors);
 
-    // Auto-open taskpane if there are errors
+    // Auto-open taskpane if there are errors (works with shared runtime)
     if (errors.length > 0 && Office.addin && Office.addin.showAsTaskpane) {
-      try { Office.addin.showAsTaskpane(); } catch (_) { /* already visible */ }
+      try { await Office.addin.showAsTaskpane(); } catch (_) { /* already visible */ }
     }
   } catch (e) {
     setStatus("エラーが発生しました: " + e.message);
     console.error(e);
   } finally {
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 
