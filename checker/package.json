@@ -1,0 +1,12 @@
+{
+  "name": "excel-validation-checker",
+  "version": "1.0.0",
+  "description": "Standalone validator for Excel files - checks empty yellow cells and SUM formulas",
+  "main": "check.js",
+  "scripts": {
+    "check": "node check.js"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
